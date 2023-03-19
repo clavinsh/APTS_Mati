@@ -47,6 +47,20 @@ struct Node {
 
 class PriorityQueue {
 public:
+    PriorityQueue(int numOfBarbers) {
+        for (int i = 1; i <= numOfBarbers; i++) {
+            Barber b(i);
+            push(b);
+        }
+    }
+
+    ~PriorityQueue() {
+        while (!empty()) {
+            Barber* b = new Barber(pop());
+            delete b;
+        }
+    }
+
     // Add a Barber to the priority queue
     void push(const Barber& b) {
         Node* newNode = new Node(b);
@@ -66,6 +80,10 @@ public:
 
     // Remove and return the highest priority Barber from the queue
     Barber pop() {
+        if (empty()) {
+            throw std::out_of_range("Priority queue is empty");
+        }
+
         Barber result = head->data;
         Node* temp = head;
         head = head->next;
