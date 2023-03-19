@@ -72,3 +72,7 @@ Izejas faila hair.out saturs:
 50 1 3
 70 2 2
 ```
+
+**P.S.
+I did not come up with this problem
+Author: Guntis Arnicāns, Faculty of Computing, University of Latvia**
