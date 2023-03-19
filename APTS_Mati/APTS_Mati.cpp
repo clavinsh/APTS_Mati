@@ -112,7 +112,52 @@ private:
 };
 
 
-int main() {
+const unsigned int MAX_TIME = 2000000000;
 
+
+
+int main() {
+    std::fstream fin("hair.in");
+
+    if (!fin.is_open()) {
+        return -1;
+    }
+
+    unsigned int barbers = 0;
+
+    fin >> barbers;
+
+    // barber count constraints
+    if (barbers < 1 || barbers > 9) {
+        return -1;
+    }
+
+    // pq initialization
+    PriorityQueue pq(barbers);
+
+
+    // for each arrival event we do sth
+    unsigned int id = 0;
+
+    fin >> id;
+
+    while (id != 0) {
+        unsigned int arrivalTime = 0;
+        unsigned int serviceLength = 0;
+
+        fin >> arrivalTime;
+        fin >> serviceLength;
+
+        Client c(id, arrivalTime, serviceLength);
+        //main logic here ig
+
+
+        fin >> id;
+    }
+
+    fin.close();
+
+
+    
     return 0;
 }
