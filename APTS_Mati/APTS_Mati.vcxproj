@@ -131,6 +131,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="hair.in" />
+    <None Include="hair.out" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
