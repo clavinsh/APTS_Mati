@@ -5,6 +5,10 @@ struct Barber {
     unsigned int id;
     unsigned int lastServiceTime;
 
+    Barber() {
+        this->id = 0;
+        this->lastServiceTime = 0;
+    }
 
     Barber(unsigned int id) {
         this->id = id;
@@ -46,6 +50,8 @@ struct Barber {
         }
     }
 
+    // equality function
+    // checks if all the values match
     bool operator==(const Barber& other) const {
         if (id == other.id && lastServiceTime == other.lastServiceTime)
             return true;
@@ -53,15 +59,14 @@ struct Barber {
     }
 };
 
-// priority queue implementation for barbers using a heap
-
-struct Node {
+struct PQNode {
     Barber data;
-    Node* next;
+    PQNode* next;
 
-    Node(const Barber& b) : data(b), next(nullptr) {}
+    PQNode(const Barber& b) : data(b), next(nullptr) {}
 };
 
+// priority queue implementation for barbers
 class PriorityQueue {
 public:
     PriorityQueue(int numOfBarbers) {
@@ -80,13 +85,13 @@ public:
 
     // Add a Barber to the priority queue
     void push(const Barber& b) {
-        Node* newNode = new Node(b);
+        PQNode* newNode = new PQNode(b);
         if (head == nullptr || b < head->data) {
             newNode->next = head;
             head = newNode;
         }
         else {
-            Node* curr = head;
+            PQNode* curr = head;
             while (curr->next != nullptr && curr->next->data < b) {
                 curr = curr->next;
             }
@@ -102,15 +107,15 @@ public:
         }
 
         Barber result = head->data;
-        Node* temp = head;
+        PQNode* temp = head;
         head = head->next;
         delete temp;
         return result;
     }
 
     void remove(const Barber& b) {
-        Node* curr = head;
-        Node* prev = nullptr;
+        PQNode* curr = head;
+        PQNode* prev = nullptr;
 
         while (curr != nullptr && !(curr->data == b)) {
             prev = curr;
@@ -138,10 +143,21 @@ public:
         return head->data;
     }
 
+    // Returns the lowest priority barber's lastServiceTime from the queue
+    unsigned int bottomServiceTime() {
+        PQNode* current = head;
+
+        while (current->next != nullptr) {
+            current = current->next;
+        }
+
+        return current->data.lastServiceTime;
+    }
+
     // Returns the highest priority barber that can complete
     // the service without interrupting their break time
     Barber topCanComplete(unsigned int startTime, unsigned int serviceLength) {
-        Node* current = head;
+        PQNode* current = head;
 
         while (current != nullptr) {
             Barber& b = current->data;
@@ -164,7 +180,7 @@ public:
     // Get the size of the priority queue
     int size() const {
         int count = 0;
-        Node* curr = head;
+        PQNode* curr = head;
         while (curr != nullptr) {
             count++;
             curr = curr->next;
@@ -173,7 +189,7 @@ public:
     }
 
 private:
-    Node* head = nullptr;
+    PQNode* head = nullptr;
 };
 
 struct Client {
@@ -271,17 +287,104 @@ struct BST {
         insertNode(newNode);
     }
 
-    void inOrderTraversal(BSTNode* root) {
+    void inOrderTraversalToFile(BSTNode* root, std::ofstream& file) {
         if (root == nullptr) {
             return;
         }
-        inOrderTraversal(root->left);
-        std::cout << root->data.endTime << " " << root->data.barberID << " " << root->data.id << '\n';
-        inOrderTraversal(root->right);
+        inOrderTraversalToFile(root->left,file);
+        file << root->data.endTime << " " << root->data.barberID << " " << root->data.id << '\n';
+        inOrderTraversalToFile(root->right,file);
     }
 
-    void print() {
-        inOrderTraversal(root);
+    void printToFile(std::ofstream& file) {
+        inOrderTraversalToFile(root,file);
+    }
+};
+
+template <typename T>
+struct ListNode {
+    T data;
+    ListNode<T>* next;
+};
+
+template <typename T>
+class LinkedList {
+private:
+    ListNode<T>* head;
+    ListNode<T>* tail;
+public:
+    LinkedList() {
+        head = nullptr;
+        tail = nullptr;
+    }
+    ~LinkedList() {
+        while (head != nullptr) {
+            ListNode<T>* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+    ListNode<T>* getHead() {
+        return head;
+    }
+
+    void push_front(T data) {
+        ListNode<T>* new_node = new ListNode<T>;
+        new_node->data = data;
+        new_node->next = head;
+        head = new_node;
+        if (tail == nullptr) {
+            tail = new_node;
+        }
+    }
+    void push_back(T data) {
+        ListNode<T>* new_node = new ListNode<T>;
+        new_node->data = data;
+        new_node->next = nullptr;
+        if (tail != nullptr) {
+            tail->next = new_node;
+        }
+        tail = new_node;
+        if (head == nullptr) {
+            head = new_node;
+        }
+    }
+    T& front() {
+        return head->data;
+    }
+    T& back() {
+        return tail->data;
+    }
+
+    void erase(int index) {
+        if (head == nullptr) {
+            return;
+        }
+        if (index == 0) {
+            ListNode<T>* temp = head;
+            head = head->next;
+            if (tail == temp) {
+                tail = nullptr;
+            }
+            delete temp;
+            return;
+        }
+        ListNode<T>* current = head;
+        for (int i = 0; i < index - 1; i++) {
+            if (current->next == nullptr) {
+                return;
+            }
+            current = current->next;
+        }
+        ListNode<T>* temp = current->next;
+        if (temp == nullptr) {
+            return;
+        }
+        current->next = temp->next;
+        if (tail == temp) {
+            tail = current;
+        }
+        delete temp;
     }
 };
 
@@ -306,19 +409,23 @@ int main() {
     // pq initialization
     PriorityQueue pq(barbers);
 
-    // busy barbers
-    //Barber busyBarbers[9] = {0,0,0,0,0,0,0,0,0};
-
-
+    // binary search tree for the served clients
     BST clients;
 
-    
+    // busy barbers
+    LinkedList<Barber> busyBarbers;
+
+    // not served clients
+    LinkedList<Client> notServedClients;
+
+    unsigned int currentTime = 0;
+
     unsigned int arrivalTime = 0;
 
     fin >> arrivalTime;
 
     while (arrivalTime != 0) {
-        
+
         unsigned int id = 0;
         unsigned int serviceLength = 0;
 
@@ -327,14 +434,72 @@ int main() {
 
         Client c(id, arrivalTime, serviceLength);
 
-
         // when the current client arrives, we check
         // if any busy barbers have completed the job
+        // then remove and add them to the pq
+        {
+            ListNode<Barber>* current = busyBarbers.getHead();
+            int i = 0;
+            while (current != nullptr) {
+                Barber b = current->data;
+                if (b.lastServiceTime < arrivalTime) {
+                    current = current->next;
+                    busyBarbers.erase(i);
+                    pq.push(b);
+                }
+                else {
+                    i++;
+                    current = current->next;
+                } 
+            }
+        };
 
-        // if there is a barber immediately available that can already complete the task
-        // then we assign 
+        // first we must serve previosuly not served clients
+        {
+            ListNode<Client>* current = notServedClients.getHead();
+            int i = 0;
+            while (current != nullptr) {
+                Client c = current->data;
+
+                Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
+
+                if (!(b == NULL)) {
+                    unsigned int end = currentTime + serviceLength - 1;
+                    c.barberID = b.id;
+                    c.serviceTime = currentTime;
+                    c.endTime = end;
+                    clients.insertClient(c);
+                    pq.remove(b);
+                    b.lastServiceTime = end;
+                    busyBarbers.push_back(b);
+                }
+
+                current = current->next;
+            }
+        };
+        //for (auto i = notServedClients.begin(); i != notServedClients.end(); ++i) {
+        //    Client c = *i;
+
+        //    unsigned int currentTime = pq.top().lastServiceTime + 1;
+
+        //    Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
+
+        //    if (!(b == NULL)) {
+        //        unsigned int end = currentTime + serviceLength - 1;
+        //        c.barberID = b.id;
+        //        c.serviceTime = currentTime;
+        //        c.endTime = end;
+        //        clients.insertClient(c);
+        //        pq.remove(b);
+        //        b.lastServiceTime = end;
+        //        busyBarbers.push_back(b);
+
+        //    }
+        //}
+
+        // if there is a barber immediately available that can already serve the client
+        // then we assign
         Barber b = pq.topCanComplete(arrivalTime, serviceLength);
-
         if (!(b == NULL)) {
             unsigned int end = arrivalTime + serviceLength - 1;
             c.barberID = b.id;
@@ -343,14 +508,24 @@ int main() {
             clients.insertClient(c);
             pq.remove(b);
             b.lastServiceTime = end;
+            busyBarbers.push_back(b);
+        }
+        else {
+            // if no barbers are available, then in this 'turn'
+            // the client gets added to the not served client list
+            notServedClients.push_back(c);
         }
 
         fin >> arrivalTime;
     }
 
+    // additional check if there are still not served clients
+
     fin.close();
 
-    clients.print();
+    std::ofstream fout("hair.out");
+
+    clients.printToFile(fout);
 
     return 0;
 }
