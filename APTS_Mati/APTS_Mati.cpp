@@ -10,6 +10,28 @@ struct Barber {
         this->lastServiceTime = 0;
     }
 
+    // can the barber complete the service without interrupting the break time
+    bool CanComplete(unsigned int startTime, unsigned int serviceLength) {
+        // next or current break time since startTime
+        unsigned int potentialBreakTime = startTime / 100;
+        unsigned int hundreths = potentialBreakTime % 10;
+        potentialBreakTime /= 10;
+
+        if (hundreths == id) return false;
+
+        potentialBreakTime = potentialBreakTime * 10 + id;
+        potentialBreakTime *= 100;
+
+        if (potentialBreakTime < startTime) {
+            potentialBreakTime += 1000;
+        }
+
+        if (startTime + serviceLength - 1 < potentialBreakTime) {
+            return true;
+        }
+        else return false;
+    }
+
     // comparison function
     // priority takes the one barber with the longest wait time
     // if barbers have equal wait time, then priority takes the one with
@@ -91,6 +113,11 @@ public:
         return result;
     }
 
+    // Returns the highest priority barber from the queue
+    Barber top() {
+        return head->data;
+    }
+
     // Check if the priority queue is empty
     bool empty() const {
         return head == nullptr;
@@ -136,7 +163,7 @@ int main() {
     PriorityQueue pq(barbers);
 
 
-    // for each arrival event we do sth
+    
     unsigned int id = 0;
 
     fin >> id;
@@ -149,7 +176,15 @@ int main() {
         fin >> serviceLength;
 
         Client c(id, arrivalTime, serviceLength);
-        //main logic here ig
+
+
+        // at each arrival event we check the pq
+        // 
+
+        
+
+
+
 
 
         fin >> id;
@@ -158,6 +193,7 @@ int main() {
     fin.close();
 
 
-    
+    Barber testBarber(3);
+
     return 0;
 }
