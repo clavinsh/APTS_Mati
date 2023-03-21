@@ -5,13 +5,14 @@ struct Barber {
     unsigned int id;
     unsigned int lastServiceTime;
 
+
     Barber(unsigned int id) {
         this->id = id;
         this->lastServiceTime = 0;
     }
 
     // can the barber complete the service without interrupting the break time
-    bool CanComplete(unsigned int startTime, unsigned int serviceLength) {
+    bool canComplete(unsigned int startTime, unsigned int serviceLength) {
         // next or current break time since startTime
         unsigned int potentialBreakTime = startTime / 100;
         unsigned int hundreths = potentialBreakTime % 10;
@@ -41,20 +42,14 @@ struct Barber {
             return lastServiceTime > other.lastServiceTime;
         }
         else {
-            return id > other.id;
+            return id < other.id;
         }
     }
-};
 
-struct Client {
-    unsigned int id;
-    unsigned int arrivalTime;
-    unsigned int serviceLength;
-
-    Client(unsigned int id, unsigned int arrivalTime, unsigned int serviceLength) {
-        this->id = id;
-        this->arrivalTime = arrivalTime;
-        this->serviceLength = serviceLength;
+    bool operator==(const Barber& other) const {
+        if (id == other.id && lastServiceTime == other.lastServiceTime)
+            return true;
+        else return false;
     }
 };
 
@@ -86,7 +81,7 @@ public:
     // Add a Barber to the priority queue
     void push(const Barber& b) {
         Node* newNode = new Node(b);
-        if (head == nullptr || b < head-> data) {
+        if (head == nullptr || b < head->data) {
             newNode->next = head;
             head = newNode;
         }
@@ -113,9 +108,52 @@ public:
         return result;
     }
 
+    void remove(const Barber& b) {
+        Node* curr = head;
+        Node* prev = nullptr;
+
+        while (curr != nullptr && !(curr->data == b)) {
+            prev = curr;
+            curr = curr->next;
+        }
+
+        if (curr == nullptr) {
+            // Barber not found in the queue
+            return;
+        }
+
+        if (prev == nullptr) {
+            // Barber is at the head of the queue
+            head = curr->next;
+        }
+        else {
+            prev->next = curr->next;
+        }
+
+        delete curr;
+    }
+
     // Returns the highest priority barber from the queue
     Barber top() {
         return head->data;
+    }
+
+    // Returns the highest priority barber that can complete
+    // the service without interrupting their break time
+    Barber topCanComplete(unsigned int startTime, unsigned int serviceLength) {
+        Node* current = head;
+
+        while (current != nullptr) {
+            Barber& b = current->data;
+
+            if (b.canComplete(startTime, serviceLength)) {
+                return b;
+            }
+
+            current = current->next;
+        }
+
+        return NULL;
     }
 
     // Check if the priority queue is empty
@@ -138,10 +176,116 @@ private:
     Node* head = nullptr;
 };
 
+struct Client {
+    unsigned int id;
+    unsigned int arrivalTime;
+    unsigned int serviceLength;
+    unsigned int serviceTime;
+    unsigned int endTime;
+    unsigned int barberID;
+
+
+    Client() {}
+
+    Client(unsigned int id, unsigned int arrivalTime, unsigned int serviceLength) {
+        this->id = id;
+        this->arrivalTime = arrivalTime;
+        this->serviceLength = serviceLength;
+        this->serviceTime = 0;
+        this->endTime = 0;
+        this->barberID = 0;
+    }
+
+    Client(Client& client) {
+        this->id = client.id;
+        this->arrivalTime = client.arrivalTime;
+        this->serviceLength = client.serviceLength;
+        this->serviceTime = client.serviceTime;
+        this->endTime = client.endTime;
+        this->barberID = client.barberID;
+    }
+
+    bool operator<(const Client& other) const {
+        if (endTime != other.endTime) {
+            return endTime < other.endTime;
+        }
+        else {
+            return barberID < other.barberID;
+        }
+    }
+};
+
+// given that there may be many clients,
+// and the ordering may change at any insertion (a client that arrives later
+// may be already finished before a client arrives earlier)
+// a binary search tree structure could do best for insertion time complexity O(log n)
+struct BSTNode {
+    Client data;
+    BSTNode* left;
+    BSTNode* right;
+
+    //BSTNode() : data(nullptr), left(nullptr), right(nullptr) {};
+
+    BSTNode(Client c) : data(c), left(nullptr), right(nullptr) {}
+};
+
+struct BST {
+    BSTNode* root;
+
+    BST() {
+        root = NULL;
+    }
+
+    bool isEmpty() {
+        return root = nullptr;
+    }
+
+    void insertNode(BSTNode* node) {
+        if (root == nullptr) {
+            root = node;
+            return;
+        }
+
+        BSTNode* temp = root;
+
+        while (temp != nullptr) {
+            if (node->data < temp->data && temp->left == nullptr) {
+                temp->left = node;
+                break;
+            }
+            else if (node->data < temp->data) {
+                temp = temp->left;
+            }
+            else if ((temp->data < node->data) && (temp->right == NULL)) {
+                temp->right = node;
+                break;
+            }
+            else {
+                temp = temp->right;
+            }
+        }
+    }
+
+    void insertClient(Client client) {
+        BSTNode* newNode = new BSTNode(client);
+        insertNode(newNode);
+    }
+
+    void inOrderTraversal(BSTNode* root) {
+        if (root == nullptr) {
+            return;
+        }
+        inOrderTraversal(root->left);
+        std::cout << root->data.endTime << " " << root->data.barberID << " " << root->data.id << '\n';
+        inOrderTraversal(root->right);
+    }
+
+    void print() {
+        inOrderTraversal(root);
+    }
+};
 
 const unsigned int MAX_TIME = 2000000000;
-
-
 
 int main() {
     std::fstream fin("hair.in");
@@ -162,38 +306,51 @@ int main() {
     // pq initialization
     PriorityQueue pq(barbers);
 
+    // busy barbers
+    //Barber busyBarbers[9] = {0,0,0,0,0,0,0,0,0};
+
+
+    BST clients;
 
     
-    unsigned int id = 0;
+    unsigned int arrivalTime = 0;
 
-    fin >> id;
+    fin >> arrivalTime;
 
-    while (id != 0) {
-        unsigned int arrivalTime = 0;
+    while (arrivalTime != 0) {
+        
+        unsigned int id = 0;
         unsigned int serviceLength = 0;
 
-        fin >> arrivalTime;
+        fin >> id;
         fin >> serviceLength;
 
         Client c(id, arrivalTime, serviceLength);
 
 
-        // at each arrival event we check the pq
-        // 
+        // when the current client arrives, we check
+        // if any busy barbers have completed the job
 
-        
+        // if there is a barber immediately available that can already complete the task
+        // then we assign 
+        Barber b = pq.topCanComplete(arrivalTime, serviceLength);
 
+        if (!(b == NULL)) {
+            unsigned int end = arrivalTime + serviceLength - 1;
+            c.barberID = b.id;
+            c.serviceTime = arrivalTime;
+            c.endTime = end;
+            clients.insertClient(c);
+            pq.remove(b);
+            b.lastServiceTime = end;
+        }
 
-
-
-
-        fin >> id;
+        fin >> arrivalTime;
     }
 
     fin.close();
 
-
-    Barber testBarber(3);
+    clients.print();
 
     return 0;
 }
