@@ -1,4 +1,3 @@
-#include <iostream>
 #include<fstream>
 
 struct Barber {
@@ -43,7 +42,7 @@ struct Barber {
     // the smallest id
     bool operator<(const Barber& other) const {
         if (lastServiceTime != other.lastServiceTime) {
-            return lastServiceTime > other.lastServiceTime;
+            return lastServiceTime < other.lastServiceTime;
         }
         else {
             return id < other.id;
@@ -78,8 +77,7 @@ public:
 
     ~PriorityQueue() {
         while (!empty()) {
-            Barber* b = new Barber(pop());
-            delete b;
+            pop();
         }
     }
 
@@ -106,7 +104,7 @@ public:
             throw std::out_of_range("Priority queue is empty");
         }
 
-        Barber result = head->data;
+        Barber result = std::move(head->data);
         PQNode* temp = head;
         head = head->next;
         delete temp;
@@ -140,7 +138,7 @@ public:
 
     // Returns the highest priority barber from the queue
     Barber top() {
-        return head->data;
+        return head != nullptr ? head->data : NULL;
     }
 
     // Returns the lowest priority barber's lastServiceTime from the queue
@@ -201,7 +199,14 @@ struct Client {
     unsigned int barberID;
 
 
-    Client() {}
+    Client() {
+        this->id = 0;
+        this->arrivalTime = 0;
+        this->serviceLength = 0;
+        this->serviceTime = 0;
+        this->endTime = 0;
+        this->barberID = 0;
+    }
 
     Client(unsigned int id, unsigned int arrivalTime, unsigned int serviceLength) {
         this->id = id;
@@ -388,8 +393,6 @@ public:
     }
 };
 
-const unsigned int MAX_TIME = 2000000000;
-
 int main() {
     std::fstream fin("hair.in");
 
@@ -464,9 +467,9 @@ int main() {
                 Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
 
                 if (!(b == NULL)) {
-                    unsigned int end = currentTime + serviceLength - 1;
+                    unsigned int end = b.lastServiceTime + c.serviceLength;
                     c.barberID = b.id;
-                    c.serviceTime = currentTime;
+                    c.serviceTime = b.lastServiceTime;
                     c.endTime = end;
                     clients.insertClient(c);
                     pq.remove(b);
@@ -477,25 +480,6 @@ int main() {
                 current = current->next;
             }
         };
-        //for (auto i = notServedClients.begin(); i != notServedClients.end(); ++i) {
-        //    Client c = *i;
-
-        //    unsigned int currentTime = pq.top().lastServiceTime + 1;
-
-        //    Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
-
-        //    if (!(b == NULL)) {
-        //        unsigned int end = currentTime + serviceLength - 1;
-        //        c.barberID = b.id;
-        //        c.serviceTime = currentTime;
-        //        c.endTime = end;
-        //        clients.insertClient(c);
-        //        pq.remove(b);
-        //        b.lastServiceTime = end;
-        //        busyBarbers.push_back(b);
-
-        //    }
-        //}
 
         // if there is a barber immediately available that can already serve the client
         // then we assign
@@ -520,8 +504,56 @@ int main() {
     }
 
     // additional check if there are still not served clients
+    {
+        ListNode<Client>* current = notServedClients.getHead();
+        int i = 0;
+        while (current != nullptr) {
+            Client c = current->data;
+
+
+            // when the current client arrives, we check
+            // if any busy barbers have completed the job
+            // then remove and add them to the pq
+            {
+                ListNode<Barber>* current = busyBarbers.getHead();
+                int i = 0;
+                while (current != nullptr) {
+                    Barber b = current->data;
+                    if (b.lastServiceTime < arrivalTime) {
+                        current = current->next;
+                        busyBarbers.erase(i);
+                        pq.push(b);
+                    }
+                    else {
+                        i++;
+                        current = current->next;
+                    }
+                }
+            };
+
+            Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
+
+            if (!(b == NULL)) {
+                unsigned int end = b.lastServiceTime + c.serviceLength;
+                c.barberID = b.id;
+                c.serviceTime = b.lastServiceTime;
+                c.endTime = end;
+                clients.insertClient(c);
+                pq.remove(b);
+                b.lastServiceTime = end;
+                busyBarbers.push_back(b);
+            }
+
+            current = current->next;
+        }
+    };
 
     fin.close();
+
+    
+    busyBarbers.~LinkedList();
+    notServedClients.~LinkedList();
+    pq.~PriorityQueue();
 
     std::ofstream fout("hair.out");
 
