@@ -111,6 +111,15 @@ struct PQNode {
     PQNode(const Barber& b) : data(b), next(nullptr) {}
 };
 
+struct earliestAvailabilityPair {
+    Barber* b;
+    unsigned int earliestTime;
+    earliestAvailabilityPair(Barber* barber, unsigned int time) {
+        this->b = barber;
+        this->earliestTime = time;
+    }
+};
+
 // priority queue implementation for barbers
 class PriorityQueue {
 public:
@@ -200,27 +209,25 @@ public:
 
     // Returns the highest priority barber that can complete
     // the service without interrupting their break time
-    Barber topCanComplete(unsigned int startTime, unsigned int serviceLength) {
+    Barber* topCanComplete(unsigned int startTime, unsigned int serviceLength) {
         PQNode* current = head;
 
         while (current != nullptr) {
-            Barber& b = current->data;
-
-            if (b.canComplete(startTime, serviceLength)) {
-                return b;
+            if (current->data.canComplete(startTime, serviceLength)) {
+                return &(current->data);
             }
 
             current = current->next;
         }
 
-        return NULL;
+        return nullptr;
     }
 
-    Barber earliestAvailability(unsigned int startTime, unsigned int serviceLength) {
+    earliestAvailabilityPair earliestAvailability(unsigned int startTime, unsigned int serviceLength) {
         PQNode* current = head;
 
-        Barber earliest = current->data;
-        unsigned int earliestTime = earliest.earliestAvailabilityForService(startTime, serviceLength);
+        Barber* earliest = &(current->data);
+        unsigned int earliestTime = earliest->earliestAvailabilityForService(startTime, serviceLength);
 
         while (current != nullptr) {
             unsigned int currentTime = current->data.earliestAvailabilityForService(startTime, serviceLength);
@@ -228,17 +235,17 @@ public:
             // earlier than previous one
             if (currentTime < earliestTime) {
                 earliestTime = currentTime;
-                earliest = current->data;
+                earliest = &(current->data);
             }
             // same time but higher priority
-            else if (currentTime == earliestTime && current->data < earliest) {
+            else if (currentTime == earliestTime && current->data < *earliest) {
                 earliestTime = currentTime;
-                earliest = current->data;
+                earliest = &(current->data);
             }
             current = current->next;    
         }
-
-        return earliest;
+        
+        return earliestAvailabilityPair(earliest, earliestTime);
     }
 
     // Check if the priority queue is empty
@@ -383,134 +390,6 @@ struct ListNode {
     ListNode<T>* next;
 };
 
-template <typename T>
-class LinkedList {
-private:
-    ListNode<T>* head;
-    ListNode<T>* tail;
-public:
-    LinkedList() {
-        head = nullptr;
-        tail = nullptr;
-    }
-    ~LinkedList() {
-        while (head != nullptr) {
-            ListNode<T>* temp = head;
-            head = head->next;
-            delete temp;
-        }
-    }
-    ListNode<T>* getHead() {
-        return head;
-    }
-
-    void push_front(T data) {
-        ListNode<T>* new_node = new ListNode<T>;
-        new_node->data = data;
-        new_node->next = head;
-        head = new_node;
-        if (tail == nullptr) {
-            tail = new_node;
-        }
-    }
-    void push_back(T data) {
-        ListNode<T>* new_node = new ListNode<T>;
-        new_node->data = data;
-        new_node->next = nullptr;
-        if (tail != nullptr) {
-            tail->next = new_node;
-        }
-        tail = new_node;
-        if (head == nullptr) {
-            head = new_node;
-        }
-    }
-    T& front() {
-        return head->data;
-    }
-    T& back() {
-        return tail->data;
-    }
-
-    void erase(int index) {
-        if (head == nullptr) {
-            return;
-        }
-        if (index == 0) {
-            ListNode<T>* temp = head;
-            head = head->next;
-            if (tail == temp) {
-                tail = nullptr;
-            }
-            delete temp;
-            return;
-        }
-        ListNode<T>* current = head;
-        for (int i = 0; i < index - 1; i++) {
-            if (current->next == nullptr) {
-                return;
-            }
-            current = current->next;
-        }
-        ListNode<T>* temp = current->next;
-        if (temp == nullptr) {
-            return;
-        }
-        current->next = temp->next;
-        if (tail == temp) {
-            tail = current;
-        }
-        delete temp;
-    }
-};
-
-// move the no longer busy barbers to the priorityqueue 
-// if they have finished their service by 'time'
-void freeUpBarbers(PriorityQueue& pq, LinkedList<Barber>& busyBarbers, unsigned int time) {
-    ListNode<Barber>* current = busyBarbers.getHead();
-    int i = 0;
-    while (current != nullptr) {
-        Barber b = current->data;
-        if (b.lastServiceTime < time) {
-            current = current->next;
-            busyBarbers.erase(i);
-            pq.push(b);
-        }
-        else {
-            i++;
-            current = current->next;
-        }
-    }
-}
-
-void freeAllBusyBarbers(PriorityQueue& pq, LinkedList<Barber>& busyBarbers) {
-    ListNode<Barber>* current = busyBarbers.getHead();
-    while (current != nullptr) {
-        current = current->next;
-        busyBarbers.erase(0);
-    }
-}
-
-void freeEarliestBarbers(PriorityQueue& pq, LinkedList<Barber>& busyBarbers) {
-    ListNode<Barber>* current = busyBarbers.getHead();
-
-    unsigned int lowest = current->data.lastServiceTime;
-    while (current != nullptr) {
-        if (current->data.lastServiceTime < lowest) {
-            lowest = current->data.lastServiceTime;
-        }
-    }
-
-    freeUpBarbers(pq, busyBarbers, lowest);
-}
-
-//unsigned int getLatestServeTime(LinkedList<Barber>& busyBarbers) {
-//    ListNode<Barber>* current = busyBarbers.getHead();
-//
-//    unsigned int result
-//    
-//}
-
 int main() {
     std::fstream fin("hair.in");
 
@@ -533,12 +412,6 @@ int main() {
     // binary search tree for the served clients
     BST clients;
 
-    // busy barbers
-    LinkedList<Barber> busyBarbers;
-
-    // not served clients
-    LinkedList<Client> notServedClients;
-
     unsigned int currentTime = 0;
 
     unsigned int arrivalTime = 0;
@@ -555,67 +428,38 @@ int main() {
 
         Client c(id, arrivalTime, serviceLength);
 
-        // when the current client arrives, we check if any busy 
-        // barbers have completed the job at the current arrival time
-        // then remove and add them to the pq
-
-        freeUpBarbers(pq, busyBarbers, arrivalTime);
-
         // if there is a barber immediately available that can already serve the client
         // then we assign
-        Barber b = pq.topCanComplete(arrivalTime, serviceLength);
-        if (!(b == NULL)) {
+        Barber* b = pq.topCanComplete(arrivalTime, serviceLength);
+        if (!(b == nullptr)) {
             unsigned int end = arrivalTime + serviceLength - 1;
-            c.barberID = b.id;
+            c.barberID = b->id;
             c.serviceTime = arrivalTime;
             c.endTime = end;
             clients.insertClient(c);
-            pq.remove(b);
-            b.lastServiceTime = end;
-            busyBarbers.push_back(b);
+            //pq.remove(b);
+            b->lastServiceTime = end;
+            //busyBarbers.push_back(b);
         }
         else {
             {
                 // if no barber is available immediately
-                // find the one with earliest availability & priority 
-                ListNode<Barber>* current = busyBarbers.getHead();
-                Barber earliest = current->data;
-                unsigned int earliestTime = earliest.earliestAvailabilityForService(arrivalTime, serviceLength);
+                // find the one with earliest availability & priority
 
-                int i = 0;
-                int earliestIndex = 0;
+                earliestAvailabilityPair pair = pq.earliestAvailability(arrivalTime, serviceLength);
 
-                while (current != nullptr) {
-                    unsigned int currentTime = current->data.earliestAvailabilityForService(arrivalTime, serviceLength);
-                    // earlier than the previous top one
-                    if (currentTime < earliestTime) {
-                        earliestTime = currentTime;
-                        earliest = current->data;
-                        earliestIndex = i++;
-                        current = current->next;
-                    }
-                    // same availability but higher priority
-                    else if (currentTime == earliestTime && current->data < earliest) {
-                        earliestTime = currentTime;
-                        earliest = current->data;
-                        earliestIndex = i++;
-                        current = current->next;
-                    }
-                    // skip
-                    else {
-                        i++;
-                        current = current->next;
-                    }
+                // something has gone wrong because by this would mean there are no barbers in the pq
+                if ((pair.b == nullptr)) {
+                    return -1; 
                 }
 
-                unsigned int end = earliestTime + serviceLength - 1;
-                c.barberID = earliest.id;
-                c.serviceTime = earliestTime;
+                unsigned int end = pair.earliestTime + serviceLength - 1;
+                c.barberID = pair.b->id;
+                c.serviceTime = pair.earliestTime;
                 c.endTime = end;
-                earliest.lastServiceTime = end;
+                pair.b->lastServiceTime = end;
                 clients.insertClient(c);
-                busyBarbers.erase(earliestIndex);
-                busyBarbers.push_back(earliest);
+
             };
         }
 
@@ -624,14 +468,13 @@ int main() {
 
     fin.close();
 
-    
-    busyBarbers.~LinkedList();
-    notServedClients.~LinkedList();
-    pq.~PriorityQueue();
+    //pq.~PriorityQueue();
 
     std::ofstream fout("hair.out");
 
     clients.printToFile(fout);
+
+    fout.close();
 
     return 0;
 }
