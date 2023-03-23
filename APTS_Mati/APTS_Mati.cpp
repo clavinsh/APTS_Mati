@@ -16,6 +16,11 @@ struct Barber {
 
     // can the barber complete the service without interrupting the break time
     bool canComplete(unsigned int startTime, unsigned int serviceLength) {
+        // can't complete the service if it starts before/during the previous service
+        if (startTime <= this->lastServiceTime) {
+            return false;
+        }
+
         // next or current break time since startTime
         unsigned int potentialBreakTime = startTime / 100;
         unsigned int hundreths = potentialBreakTime % 10;
@@ -34,6 +39,47 @@ struct Barber {
             return true;
         }
         else return false;
+    }
+
+    // returns the moment this barber is available
+    // after the current, oncoming break 
+    unsigned int nextFreeTime(unsigned int currentTime) {
+
+        unsigned int currentBreakTime = currentTime / 1000;
+        currentBreakTime = currentBreakTime * 1000 + id * 100;
+
+        if (currentTime > currentBreakTime + 99) {
+            return currentBreakTime + 1100;
+        }
+
+        return currentBreakTime + 100;
+    }
+
+
+
+    unsigned int earliestAvailabilityForService(unsigned int startTime, unsigned int serviceLength) {
+        // can we complete immediately 
+        if (canComplete(startTime, serviceLength)) {
+            return startTime;
+        }
+
+        // still doing the previous service
+        if (startTime <= this->lastServiceTime) {
+            // can serve immediately after
+            if (canComplete(this->lastServiceTime + 1, serviceLength)) {
+                return this->lastServiceTime + 1;
+            }
+            // break time interrupts
+            else {
+                return nextFreeTime(this->lastServiceTime + 1);
+            }
+        }
+
+        // the break time interrupts, should be able to do it right after
+        // break time
+        else {
+            return nextFreeTime(startTime);
+        }
     }
 
     // comparison function
@@ -168,6 +214,31 @@ public:
         }
 
         return NULL;
+    }
+
+    Barber earliestAvailability(unsigned int startTime, unsigned int serviceLength) {
+        PQNode* current = head;
+
+        Barber earliest = current->data;
+        unsigned int earliestTime = earliest.earliestAvailabilityForService(startTime, serviceLength);
+
+        while (current != nullptr) {
+            unsigned int currentTime = current->data.earliestAvailabilityForService(startTime, serviceLength);
+
+            // earlier than previous one
+            if (currentTime < earliestTime) {
+                earliestTime = currentTime;
+                earliest = current->data;
+            }
+            // same time but higher priority
+            else if (currentTime == earliestTime && current->data < earliest) {
+                earliestTime = currentTime;
+                earliest = current->data;
+            }
+            current = current->next;    
+        }
+
+        return earliest;
     }
 
     // Check if the priority queue is empty
@@ -393,6 +464,53 @@ public:
     }
 };
 
+// move the no longer busy barbers to the priorityqueue 
+// if they have finished their service by 'time'
+void freeUpBarbers(PriorityQueue& pq, LinkedList<Barber>& busyBarbers, unsigned int time) {
+    ListNode<Barber>* current = busyBarbers.getHead();
+    int i = 0;
+    while (current != nullptr) {
+        Barber b = current->data;
+        if (b.lastServiceTime < time) {
+            current = current->next;
+            busyBarbers.erase(i);
+            pq.push(b);
+        }
+        else {
+            i++;
+            current = current->next;
+        }
+    }
+}
+
+void freeAllBusyBarbers(PriorityQueue& pq, LinkedList<Barber>& busyBarbers) {
+    ListNode<Barber>* current = busyBarbers.getHead();
+    while (current != nullptr) {
+        current = current->next;
+        busyBarbers.erase(0);
+    }
+}
+
+void freeEarliestBarbers(PriorityQueue& pq, LinkedList<Barber>& busyBarbers) {
+    ListNode<Barber>* current = busyBarbers.getHead();
+
+    unsigned int lowest = current->data.lastServiceTime;
+    while (current != nullptr) {
+        if (current->data.lastServiceTime < lowest) {
+            lowest = current->data.lastServiceTime;
+        }
+    }
+
+    freeUpBarbers(pq, busyBarbers, lowest);
+}
+
+//unsigned int getLatestServeTime(LinkedList<Barber>& busyBarbers) {
+//    ListNode<Barber>* current = busyBarbers.getHead();
+//
+//    unsigned int result
+//    
+//}
+
 int main() {
     std::fstream fin("hair.in");
 
@@ -437,49 +555,11 @@ int main() {
 
         Client c(id, arrivalTime, serviceLength);
 
-        // when the current client arrives, we check
-        // if any busy barbers have completed the job
+        // when the current client arrives, we check if any busy 
+        // barbers have completed the job at the current arrival time
         // then remove and add them to the pq
-        {
-            ListNode<Barber>* current = busyBarbers.getHead();
-            int i = 0;
-            while (current != nullptr) {
-                Barber b = current->data;
-                if (b.lastServiceTime < arrivalTime) {
-                    current = current->next;
-                    busyBarbers.erase(i);
-                    pq.push(b);
-                }
-                else {
-                    i++;
-                    current = current->next;
-                } 
-            }
-        };
 
-        // first we must serve previosuly not served clients
-        {
-            ListNode<Client>* current = notServedClients.getHead();
-            int i = 0;
-            while (current != nullptr) {
-                Client c = current->data;
-
-                Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
-
-                if (!(b == NULL)) {
-                    unsigned int end = b.lastServiceTime + c.serviceLength;
-                    c.barberID = b.id;
-                    c.serviceTime = b.lastServiceTime;
-                    c.endTime = end;
-                    clients.insertClient(c);
-                    pq.remove(b);
-                    b.lastServiceTime = end;
-                    busyBarbers.push_back(b);
-                }
-
-                current = current->next;
-            }
-        };
+        freeUpBarbers(pq, busyBarbers, arrivalTime);
 
         // if there is a barber immediately available that can already serve the client
         // then we assign
@@ -495,58 +575,52 @@ int main() {
             busyBarbers.push_back(b);
         }
         else {
-            // if no barbers are available, then in this 'turn'
-            // the client gets added to the not served client list
-            notServedClients.push_back(c);
-        }
-
-        fin >> arrivalTime;
-    }
-
-    // additional check if there are still not served clients
-    {
-        ListNode<Client>* current = notServedClients.getHead();
-        int i = 0;
-        while (current != nullptr) {
-            Client c = current->data;
-
-
-            // when the current client arrives, we check
-            // if any busy barbers have completed the job
-            // then remove and add them to the pq
             {
+                // if no barber is available immediately
+                // find the one with earliest availability & priority 
                 ListNode<Barber>* current = busyBarbers.getHead();
+                Barber earliest = current->data;
+                unsigned int earliestTime = earliest.earliestAvailabilityForService(arrivalTime, serviceLength);
+
                 int i = 0;
+                int earliestIndex = 0;
+
                 while (current != nullptr) {
-                    Barber b = current->data;
-                    if (b.lastServiceTime < arrivalTime) {
+                    unsigned int currentTime = current->data.earliestAvailabilityForService(arrivalTime, serviceLength);
+                    // earlier than the previous top one
+                    if (currentTime < earliestTime) {
+                        earliestTime = currentTime;
+                        earliest = current->data;
+                        earliestIndex = i++;
                         current = current->next;
-                        busyBarbers.erase(i);
-                        pq.push(b);
                     }
+                    // same availability but higher priority
+                    else if (currentTime == earliestTime && current->data < earliest) {
+                        earliestTime = currentTime;
+                        earliest = current->data;
+                        earliestIndex = i++;
+                        current = current->next;
+                    }
+                    // skip
                     else {
                         i++;
                         current = current->next;
                     }
                 }
-            };
 
-            Barber b = pq.topCanComplete(pq.top().lastServiceTime + 1, c.serviceLength);
-
-            if (!(b == NULL)) {
-                unsigned int end = b.lastServiceTime + c.serviceLength;
-                c.barberID = b.id;
-                c.serviceTime = b.lastServiceTime;
+                unsigned int end = earliestTime + serviceLength - 1;
+                c.barberID = earliest.id;
+                c.serviceTime = earliestTime;
                 c.endTime = end;
+                earliest.lastServiceTime = end;
                 clients.insertClient(c);
-                pq.remove(b);
-                b.lastServiceTime = end;
-                busyBarbers.push_back(b);
-            }
-
-            current = current->next;
+                busyBarbers.erase(earliestIndex);
+                busyBarbers.push_back(earliest);
+            };
         }
-    };
+
+        fin >> arrivalTime;
+    }
 
     fin.close();
 
