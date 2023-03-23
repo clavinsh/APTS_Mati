@@ -1,6 +1,4 @@
 #include<fstream>
-#include <chrono>
-#include<iostream>
 
 struct Barber {
     unsigned int id;
@@ -375,9 +373,7 @@ public:
 };
 
 int main() {
-    auto start = std::chrono::high_resolution_clock::now();
-    // "C:/Users/hazya/Downloads/hair.in"
-    std::ifstream fin("C:/Users/hazya/Downloads/hair.in", std::ios::binary | std::ios::ate);
+    std::ifstream fin("hair.in", std::ios::binary | std::ios::ate);
 
     if (!fin.is_open()) {
         return -1;
@@ -394,13 +390,6 @@ int main() {
 
     char* ptr = buffer;
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-    std::cout << "Faila ielasishana: " << duration.count() << " ms" << std::endl;
-
-    start = std::chrono::high_resolution_clock::now();
-
     unsigned int barbers = 0;
     while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
         barbers = barbers * 10 + (*ptr++ - '0');
@@ -416,11 +405,8 @@ int main() {
         return -1;
     }
 
-    // pq initialization
-    PriorityQueue pq(barbers);
 
-    // binary search tree for the served clients
-    //BST clients;
+    PriorityQueue pq(barbers);
 
     DoublyLinkedList clients;
 
@@ -486,24 +472,13 @@ int main() {
         }
     }
 
-    
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Apstrade: " << duration.count() << " ms" << std::endl;
-
     delete[] buffer;
 
-
-    start = std::chrono::high_resolution_clock::now();
     std::ofstream fout("hair.out");
 
     clients.print(fout);
 
     fout.close();
-
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Druka: " << duration.count() << " ms" << std::endl;
 
     return 0;
 }
