@@ -367,12 +367,6 @@ struct BST {
     }
 };
 
-template <typename T>
-struct ListNode {
-    T data;
-    ListNode<T>* next;
-};
-
 int main() {
     std::fstream fin("hair.in");
 
