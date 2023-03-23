@@ -273,39 +273,19 @@ private:
 
 struct Client {
     unsigned int id;
-    unsigned int arrivalTime;
-    unsigned int serviceLength;
-    unsigned int serviceTime;
     unsigned int endTime;
     unsigned int barberID;
 
 
     Client() {
         this->id = 0;
-        this->arrivalTime = 0;
-        this->serviceLength = 0;
-        this->serviceTime = 0;
         this->endTime = 0;
         this->barberID = 0;
     }
 
-    Client(unsigned int id, unsigned int arrivalTime, unsigned int serviceLength) {
-        this->id = id;
-        this->arrivalTime = arrivalTime;
-        this->serviceLength = serviceLength;
-        this->serviceTime = 0;
-        this->endTime = 0;
-        this->barberID = 0;
-    }
+    Client(int id, int endTime, int barberId) : id(id), endTime(endTime), barberID(barberId) {}
 
-    Client(Client& client) {
-        this->id = client.id;
-        this->arrivalTime = client.arrivalTime;
-        this->serviceLength = client.serviceLength;
-        this->serviceTime = client.serviceTime;
-        this->endTime = client.endTime;
-        this->barberID = client.barberID;
-    }
+    Client(const Client& other) : id(other.id), endTime(other.endTime), barberID(other.barberID) {}
 
     bool operator<(const Client& other) const {
         if (endTime != other.endTime) {
@@ -429,49 +409,36 @@ int main() {
         fin >> id;
         fin >> serviceLength;
 
-        Client c(id, arrivalTime, serviceLength);
-
         // if there is a barber immediately available that can already serve the client
         // then we assign
         Barber* b = pq.topCanComplete(arrivalTime, serviceLength);
         if (!(b == nullptr)) {
             unsigned int end = arrivalTime + serviceLength - 1;
-            c.barberID = b->id;
-            c.serviceTime = arrivalTime;
-            c.endTime = end;
-            clients.insertClient(c);
+            clients.insertClient(Client(id, end, b->id));
             b->lastServiceTime = end;
             pq.push(pq.remove(*b));
         }
         else {
-            {
-                // if no barber is available immediately
-                // find the one with earliest availability & priority
+            // if no barber is available immediately
+            // find the one with earliest availability & priority
 
-                earliestAvailabilityPair pair = pq.earliestAvailability(arrivalTime, serviceLength);
+            earliestAvailabilityPair pair = pq.earliestAvailability(arrivalTime, serviceLength);
 
-                // something has gone wrong because by this would mean there are no barbers in the pq
-                if ((pair.b == nullptr)) {
-                    return -1; 
-                }
+            // something has gone wrong because by this would mean there are no barbers in the pq
+            if ((pair.b == nullptr)) {
+                return -1; 
+            }
 
-                unsigned int end = pair.earliestTime + serviceLength - 1;
-                c.barberID = pair.b->id;
-                c.serviceTime = pair.earliestTime;
-                c.endTime = end;
-                clients.insertClient(c);
-                pair.b->lastServiceTime = end;
-                pq.push(pq.remove(*pair.b));
-
-            };
+            unsigned int end = pair.earliestTime + serviceLength - 1;
+            clients.insertClient(Client(id, end, pair.b->id));
+            pair.b->lastServiceTime = end;
+            pq.push(pq.remove(*pair.b));
         }
 
         fin >> arrivalTime;
     }
 
     fin.close();
-
-    //pq.~PriorityQueue();
 
     std::ofstream fout("hair.out");
 
