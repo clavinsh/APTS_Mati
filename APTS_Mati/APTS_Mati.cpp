@@ -166,9 +166,10 @@ public:
         return result;
     }
 
-    void remove(const Barber& b) {
+    Barber remove(const Barber& b) {
         PQNode* curr = head;
         PQNode* prev = nullptr;
+        Barber cpy = b;
 
         while (curr != nullptr && !(curr->data == b)) {
             prev = curr;
@@ -177,7 +178,7 @@ public:
 
         if (curr == nullptr) {
             // Barber not found in the queue
-            return;
+            return b;
         }
 
         if (prev == nullptr) {
@@ -189,6 +190,8 @@ public:
         }
 
         delete curr;
+
+        return cpy; 
     }
 
     // Returns the highest priority barber from the queue
@@ -437,9 +440,8 @@ int main() {
             c.serviceTime = arrivalTime;
             c.endTime = end;
             clients.insertClient(c);
-            //pq.remove(b);
             b->lastServiceTime = end;
-            //busyBarbers.push_back(b);
+            pq.push(pq.remove(*b));
         }
         else {
             {
@@ -457,8 +459,9 @@ int main() {
                 c.barberID = pair.b->id;
                 c.serviceTime = pair.earliestTime;
                 c.endTime = end;
-                pair.b->lastServiceTime = end;
                 clients.insertClient(c);
+                pair.b->lastServiceTime = end;
+                pq.push(pq.remove(*pair.b));
 
             };
         }
