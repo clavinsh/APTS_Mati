@@ -368,17 +368,34 @@ struct BST {
 };
 
 int main() {
-    std::fstream fin("hair.in");
+    std::ifstream fin("hair.in", std::ios::binary | std::ios::ate);
 
     if (!fin.is_open()) {
         return -1;
     }
 
+    std::streamsize size = fin.tellg();
+    fin.seekg(0, std::ios::beg);
+    char* buffer = new char[size];
+    if (!fin.read(buffer, size)) {
+        return -1;
+    }
+
+    fin.close();
+
+    char* ptr = buffer;
+
     unsigned int barbers = 0;
+    while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
+        barbers = barbers * 10 + (*ptr++ - '0');
+    }
 
-    fin >> barbers;
+    // skip over any remaining whitespace or carriage return, newline characters
+    while (*ptr == ' ' || *ptr == '\n' || *ptr == '\r') {
+        ptr++;
+    }
 
-    // barber count constraints
+    // barber count constraints 
     if (barbers < 1 || barbers > 9) {
         return -1;
     }
@@ -389,21 +406,43 @@ int main() {
     // binary search tree for the served clients
     BST clients;
 
-    unsigned int currentTime = 0;
-
-    unsigned int arrivalTime = 0;
-
-    fin >> arrivalTime;
-
-    while (arrivalTime != 0) {
-
+    while (ptr < buffer + size) {
+        unsigned int arrivalTime = 0;
         unsigned int id = 0;
         unsigned int serviceLength = 0;
 
-        fin >> id;
-        fin >> serviceLength;
+        while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
+            arrivalTime = arrivalTime * 10 + (*ptr++ - '0');
+        }
 
-        // if there is a barber immediately available that can already serve the client
+        if (arrivalTime == 0) {
+            break;
+        }
+
+        // skip over any remaining whitespace or carriage return characters
+        while (*ptr == ' ' || *ptr == '\n' || *ptr == '\r') {
+            ptr++;
+        }
+
+        while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
+            id = id * 10 + (*ptr++ - '0');
+        }
+        // skip over any remaining whitespace or carriage return characters
+        while (*ptr == ' ' || *ptr == '\n' || *ptr == '\r') {
+            ptr++;
+        }
+
+        while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
+            serviceLength = serviceLength * 10 + (*ptr++ - '0');
+        }
+        // skip over any remaining whitespace or carriage return characters
+        while (*ptr == ' ' || *ptr == '\n' || *ptr == '\r') {
+            ptr++;
+        }
+        // process the arrivalTime, id, and serviceTime variables as needed
+
+
+         //if there is a barber immediately available that can already serve the client
         // then we assign
         Barber* b = pq.topCanComplete(arrivalTime, serviceLength);
         if (!(b == nullptr)) {
@@ -428,11 +467,9 @@ int main() {
             pair.b->lastServiceTime = end;
             pq.push(pq.remove(*pair.b));
         }
-
-        fin >> arrivalTime;
     }
 
-    fin.close();
+    delete[] buffer;
 
     std::ofstream fout("hair.out");
 
