@@ -297,77 +297,78 @@ struct Client {
     }
 };
 
-// given that there may be many clients,
-// and the ordering may change at any insertion (a client that arrives later
-// may be already finished before a client arrives earlier)
-// a binary search tree structure could do best for insertion time complexity O(log n)
-struct BSTNode {
-    Client data;
-    BSTNode* left;
-    BSTNode* right;
+class DoublyLinkedList {
+private:
+    struct Node {
+        Client data;
+        Node* next;
+        Node* prev;
 
-    //BSTNode() : data(nullptr), left(nullptr), right(nullptr) {};
+        Node(const Client& data) : data(data), next(nullptr), prev(nullptr) {}
+    };
 
-    BSTNode(Client c) : data(c), left(nullptr), right(nullptr) {}
-};
+    Node* start;
+    Node* end;
 
-struct BST {
-    BSTNode* root;
+public:
+    DoublyLinkedList() : start(nullptr), end(nullptr) {}
 
-    BST() {
-        root = NULL;
-    }
-
-    bool isEmpty() {
-        return root = nullptr;
-    }
-
-    void insertNode(BSTNode* node) {
-        if (root == nullptr) {
-            root = node;
-            return;
+    ~DoublyLinkedList() {
+        Node* current = start;
+        while (current != nullptr) {
+            Node* next = current->next;
+            delete current;
+            current = next;
         }
+    }
 
-        BSTNode* temp = root;
+    void insert(const Client& client) {
+        Node* newNode = new Node(client);
 
-        while (temp != nullptr) {
-            if (node->data < temp->data && temp->left == nullptr) {
-                temp->left = node;
-                break;
+        // Empty list
+        if (start == nullptr) {
+            start = end = newNode;
+        }
+        // Insert at end
+        else if (end->data < client) {
+            end->next = newNode;
+            newNode->prev = end;
+            end = newNode;
+        }
+        // Insert in middle or even the beginning
+        else {
+            Node* current = start;
+            while (current != nullptr && current->data < client) {
+                current = current->next;
             }
-            else if (node->data < temp->data) {
-                temp = temp->left;
+
+            // somewhere in the middle
+            if (current != start) {
+                newNode->prev = current->prev;
+                newNode->next = current;
+                current->prev->next = newNode;
+                current->prev = newNode;
             }
-            else if ((temp->data < node->data) && (temp->right == NULL)) {
-                temp->right = node;
-                break;
-            }
+            // start
             else {
-                temp = temp->right;
+                newNode->next = start;
+                start->prev = newNode;
+                start = newNode;
             }
         }
     }
 
-    void insertClient(Client client) {
-        BSTNode* newNode = new BSTNode(client);
-        insertNode(newNode);
-    }
-
-    void inOrderTraversalToFile(BSTNode* root, std::ofstream& file) {
-        if (root == nullptr) {
-            return;
+    void print(std::ofstream& file) {
+        Node* current = start;
+        while (current != nullptr) {
+            file << current->data.endTime << " " << current->data.barberID << " " << current->data.id << '\n';
+            current = current->next;
         }
-        inOrderTraversalToFile(root->left,file);
-        file << root->data.endTime << " " << root->data.barberID << " " << root->data.id << '\n';
-        inOrderTraversalToFile(root->right,file);
-    }
-
-    void printToFile(std::ofstream& file) {
-        inOrderTraversalToFile(root,file);
     }
 };
 
 int main() {
+    // "C:/Users/hazya/Downloads/hair.in"
     std::ifstream fin("hair.in", std::ios::binary | std::ios::ate);
 
     if (!fin.is_open()) {
@@ -404,7 +405,9 @@ int main() {
     PriorityQueue pq(barbers);
 
     // binary search tree for the served clients
-    BST clients;
+    //BST clients;
+
+    DoublyLinkedList clients;
 
     while (ptr < buffer + size) {
         unsigned int arrivalTime = 0;
@@ -439,15 +442,14 @@ int main() {
         while (*ptr == ' ' || *ptr == '\n' || *ptr == '\r') {
             ptr++;
         }
-        // process the arrivalTime, id, and serviceTime variables as needed
-
 
          //if there is a barber immediately available that can already serve the client
         // then we assign
         Barber* b = pq.topCanComplete(arrivalTime, serviceLength);
         if (!(b == nullptr)) {
             unsigned int end = arrivalTime + serviceLength - 1;
-            clients.insertClient(Client(id, end, b->id));
+            //clients.insertClient(Client(id, end, b->id));
+            clients.insert(Client(id, end, b->id));
             b->lastServiceTime = end;
             pq.push(pq.remove(*b));
         }
@@ -463,7 +465,7 @@ int main() {
             }
 
             unsigned int end = pair.earliestTime + serviceLength - 1;
-            clients.insertClient(Client(id, end, pair.b->id));
+            clients.insert(Client(id, end, pair.b->id));
             pair.b->lastServiceTime = end;
             pq.push(pq.remove(*pair.b));
         }
@@ -473,7 +475,7 @@ int main() {
 
     std::ofstream fout("hair.out");
 
-    clients.printToFile(fout);
+    clients.print(fout);
 
     fout.close();
 
