@@ -104,13 +104,6 @@ struct Barber {
     }
 };
 
-struct PQNode {
-    Barber data;
-    PQNode* next;
-
-    PQNode(const Barber& b) : data(b), next(nullptr) {}
-};
-
 struct earliestAvailabilityPair {
     Barber* b;
     unsigned int earliestTime;
@@ -122,6 +115,15 @@ struct earliestAvailabilityPair {
 
 // priority queue implementation for barbers
 class PriorityQueue {
+private:
+    struct PQNode {
+        Barber data;
+        PQNode* next;
+
+        PQNode(const Barber& b) : data(b), next(nullptr) {}
+    };
+
+    PQNode* head = nullptr;
 public:
     PriorityQueue(int numOfBarbers) {
         for (int i = 1; i <= numOfBarbers; i++) {
@@ -266,9 +268,6 @@ public:
         }
         return count;
     }
-
-private:
-    PQNode* head = nullptr;
 };
 
 struct Client {
@@ -369,7 +368,7 @@ public:
 
 int main() {
     // "C:/Users/hazya/Downloads/hair.in"
-    std::ifstream fin("hair.in", std::ios::binary | std::ios::ate);
+    std::ifstream fin("C:/Users/hazya/Downloads/hair.in", std::ios::binary | std::ios::ate);
 
     if (!fin.is_open()) {
         return -1;
