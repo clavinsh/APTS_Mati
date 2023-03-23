@@ -1,4 +1,6 @@
 #include<fstream>
+#include <chrono>
+#include<iostream>
 
 struct Barber {
     unsigned int id;
@@ -358,15 +360,22 @@ public:
     }
 
     void print(std::ofstream& file) {
+        // buffer size: 10 (endTime max size) + 1 (space) + 1 (barberID) + 1 (space) + 6 (max id size) + 1 (\n)
+        // 10 + 1 + 1 + 1 + 6 + 1 = 20
+        constexpr int buffer_size = 20; 
+        char buffer[buffer_size]; 
+
         Node* current = start;
         while (current != nullptr) {
-            file << current->data.endTime << " " << current->data.barberID << " " << current->data.id << '\n';
+            int len = std::snprintf(buffer, buffer_size, "%u %u %u\n", current->data.endTime, current->data.barberID, current->data.id);
+            file.write(buffer, len);
             current = current->next;
         }
     }
 };
 
 int main() {
+    auto start = std::chrono::high_resolution_clock::now();
     // "C:/Users/hazya/Downloads/hair.in"
     std::ifstream fin("C:/Users/hazya/Downloads/hair.in", std::ios::binary | std::ios::ate);
 
@@ -384,6 +393,13 @@ int main() {
     fin.close();
 
     char* ptr = buffer;
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    std::cout << "Faila ielasishana: " << duration.count() << " ms" << std::endl;
+
+    start = std::chrono::high_resolution_clock::now();
 
     unsigned int barbers = 0;
     while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
@@ -470,13 +486,24 @@ int main() {
         }
     }
 
+    
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Apstrade: " << duration.count() << " ms" << std::endl;
+
     delete[] buffer;
 
+
+    start = std::chrono::high_resolution_clock::now();
     std::ofstream fout("hair.out");
 
     clients.print(fout);
 
     fout.close();
+
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Druka: " << duration.count() << " ms" << std::endl;
 
     return 0;
 }
