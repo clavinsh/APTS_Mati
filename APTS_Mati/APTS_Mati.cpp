@@ -1,3 +1,5 @@
+﻿//Uzdevuma 'Mati' atrisinājums
+//Autors: Artūrs Kļaviņš, ak21373
 #include<fstream>
 
 struct Barber {
@@ -296,6 +298,11 @@ struct Client {
     }
 };
 
+// list for the served clients,
+// insertion happens at the end of the list,
+// because when inserting a new, just served client
+// it is with a high probability that their end time
+// will be close to the end of the list
 class DoublyLinkedList {
 private:
     struct Node {
@@ -308,9 +315,10 @@ private:
 
     Node* start;
     Node* end;
+    int size;
 
 public:
-    DoublyLinkedList() : start(nullptr), end(nullptr) {}
+    DoublyLinkedList() : start(nullptr), end(nullptr), size(0) {}
 
     ~DoublyLinkedList() {
         Node* current = start;
@@ -355,20 +363,24 @@ public:
                 start = newNode;
             }
         }
+        size++;
     }
 
     void print(std::ofstream& file) {
         // buffer size: 10 (endTime max size) + 1 (space) + 1 (barberID) + 1 (space) + 6 (max id size) + 1 (\n)
         // 10 + 1 + 1 + 1 + 6 + 1 = 20
-        constexpr int buffer_size = 20; 
-        char buffer[buffer_size]; 
+        constexpr int buffer_size = 20;
+        char* buffer = new char[buffer_size * size]; // allocate a buffer large enough to hold all list data
+        char* buffer_ptr = buffer;
 
         Node* current = start;
         while (current != nullptr) {
-            int len = std::snprintf(buffer, buffer_size, "%u %u %u\n", current->data.endTime, current->data.barberID, current->data.id);
-            file.write(buffer, len);
+            int len = std::snprintf(buffer_ptr, buffer_size, "%u %u %u\n", current->data.endTime, current->data.barberID, current->data.id);
+            buffer_ptr += len;
             current = current->next;
         }
+
+        file.write(buffer, buffer_ptr - buffer); // write the entire buffer to file
     }
 };
 
@@ -404,7 +416,6 @@ int main() {
     if (barbers < 1 || barbers > 9) {
         return -1;
     }
-
 
     PriorityQueue pq(barbers);
 
