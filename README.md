@@ -73,6 +73,77 @@ Izejas faila hair.out saturs:
 70 2 2
 ```
 
+## Papildus skaidrojumi:
+### Klienti ir jāapkalpo ievērojot stingru rindu
+Nedrīkst būt situācija, kad kādu klientu sāk apkalpot ātrāk kā kādu pirms tam ieradušos klientu.
+
+#### Viens frizieris
+Ieejas faila hair.in saturs:
+```
+1
+10 1 100
+20 2 10
+0
+```
+
+Izejas faila hair.out saturs:
+```
+299 1 1
+309 1 2
+```
+
+#### Divi frizieri konkurē laikā brīdī 300
+Ieejas faila hair.in saturs:
+```
+2
+110 1 100
+120 2 10
+0
+```
+
+Izejas faila hair.out saturs:
+```
+299 1 1
+309 2 2
+```
+
+#### Divi frizieri
+Ieejas faila hair.in saturs:
+```
+2
+110 1 99
+120 2 10
+0
+```
+
+Izejas faila hair.out saturs:
+```
+298 1 1
+308 1 2
+```
+
+### Vairākus klientus var sākt apkalpot vienlaicīgi
+Ir atļauts vairākus klientu sākt apkalpot vienlaicīgi. Tas netiek uzskatīts par rindas pārkāpumu.
+#### Divi frizieri atbrīvojas vienlaicīgi un ir gaidoši klienti
+
+Ieejas faila hair.in saturs:
+```
+2
+1 1 10
+2 2 9
+3 3 10
+4 4 10
+0
+```
+
+Izejas faila hair.out saturs:
+```
+10 1 1
+10 2 2
+20 1 3
+20 2 4
+```
+
 **P.S.
 I did not come up with this problem
 Author: Guntis Arnicāns, Faculty of Computing, University of Latvia**
