@@ -384,6 +384,10 @@ public:
     }
 };
 
+unsigned int max(unsigned int n1, unsigned int n2) {
+    return n1 > n2 ? n1 : n2;
+}
+
 int main() {
     std::ifstream fin("hair.in", std::ios::binary | std::ios::ate);
 
@@ -421,10 +425,13 @@ int main() {
 
     DoublyLinkedList clients;
 
+    unsigned int prevClientStartTime = 0;
+
     while (ptr < buffer + size) {
         unsigned int arrivalTime = 0;
         unsigned int id = 0;
         unsigned int serviceLength = 0;
+        
 
         while (*ptr != ' ' && *ptr != '\n' && *ptr != '\r') {
             arrivalTime = arrivalTime * 10 + (*ptr++ - '0');
@@ -457,19 +464,22 @@ int main() {
 
          //if there is a barber immediately available that can already serve the client
         // then we assign
-        Barber* b = pq.topCanComplete(arrivalTime, serviceLength);
+        unsigned int potentialTime = max(arrivalTime, prevClientStartTime);
+        Barber* b = pq.topCanComplete(potentialTime, serviceLength);
         if (!(b == nullptr)) {
-            unsigned int end = arrivalTime + serviceLength - 1;
+            unsigned int end = potentialTime + serviceLength - 1;
             //clients.insertClient(Client(id, end, b->id));
             clients.insert(Client(id, end, b->id));
             b->lastServiceTime = end;
             pq.push(pq.remove(*b));
+
+            prevClientStartTime = potentialTime;
         }
         else {
             // if no barber is available immediately
             // find the one with earliest availability & priority
 
-            earliestAvailabilityPair pair = pq.earliestAvailability(arrivalTime, serviceLength);
+            earliestAvailabilityPair pair = pq.earliestAvailability(potentialTime, serviceLength);
 
             // something has gone wrong because by this would mean there are no barbers in the pq
             if ((pair.b == nullptr)) {
@@ -480,6 +490,8 @@ int main() {
             clients.insert(Client(id, end, pair.b->id));
             pair.b->lastServiceTime = end;
             pq.push(pq.remove(*pair.b));
+
+            prevClientStartTime = pair.earliestTime;
         }
     }
 
